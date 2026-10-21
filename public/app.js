@@ -213,7 +213,7 @@
     var needsKey = Object.keys(envOf(s)).length > 0;
     var b = [];
     if (s.registry) b.push('<span class="bd reg">registry</span>'); else if (s.official) b.push('<span class="bd off">official</span>'); else b.push('<span class="bd">community</span>');
-    if (s.remote) b.push('<span class="bd rem">remote · ' + (s.remote.auth === "oauth" ? "oauth" : s.remote.auth === "urlkey" ? "key" : "no-auth") + "</span>");
+    if (s.remote) b.push('<span class="bd rem">remote · ' + ({ oauth: "oauth", urlkey: "key", bearer: "token", optional: "no-auth" }[s.remote.auth] || (s.registry ? "auth?" : "no-auth")) + "</span>");
     if (s.local) b.push('<span class="bd loc">local · ' + esc(s.local.cmd) + "</span>");
     if (needsKey) b.push('<span class="bd key">needs key</span>');
     return '<article class="card' + (inStack(s.id) ? " in" : "") + '" data-id="' + esc(s.id) + '"><div class="h"><div><h3>' + esc(s.name) + '</h3><div class="pub">' + esc(s.pub) + '</div></div><button class="add" data-id="' + esc(s.id) + '">' + (inStack(s.id) ? "✓ Added" : "+ Add") + "</button></div><p>" + esc(s.desc) + '</p><div class="badges">' + b.join("") + '</div><div class="f"><a href="' + esc(s.docs) + '" target="_blank" rel="noopener">docs ↗</a><span class="dim small">' + esc((s.tags || []).slice(0, 3).map(function (t) { return "#" + t; }).join(" ")) + "</span></div></article>";
