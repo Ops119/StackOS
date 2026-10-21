@@ -216,7 +216,7 @@
     if (s.remote) b.push('<span class="bd rem">remote · ' + ({ oauth: "oauth", urlkey: "key", bearer: "token", optional: "no-auth" }[s.remote.auth] || (s.registry ? "auth?" : "no-auth")) + "</span>");
     if (s.local) b.push('<span class="bd loc">local · ' + esc(s.local.cmd) + "</span>");
     if (needsKey) b.push('<span class="bd key">needs key</span>');
-    return '<article class="card' + (inStack(s.id) ? " in" : "") + '" data-id="' + esc(s.id) + '"><div class="h"><div><h3>' + esc(s.name) + '</h3><div class="pub">' + esc(s.pub) + '</div></div><button class="add" data-id="' + esc(s.id) + '">' + (inStack(s.id) ? "✓ Added" : "+ Add") + "</button></div><p>" + esc(s.desc) + '</p><div class="badges">' + b.join("") + '</div><div class="f"><a href="' + esc(s.docs) + '" target="_blank" rel="noopener">docs ↗</a><span class="dim small">' + esc((s.tags || []).slice(0, 3).map(function (t) { return "#" + t; }).join(" ")) + "</span></div></article>";
+    return '<article class="card' + (inStack(s.id) ? " in" : "") + '" data-id="' + esc(s.id) + '"><div class="h"><div class="ttl"><h3><button class="nm" data-detail="' + esc(s.id) + '">' + esc(s.name) + '</button></h3><div class="pub">' + esc(s.pub) + '</div></div><button class="add" data-id="' + esc(s.id) + '">' + (inStack(s.id) ? "✓ Added" : "+ Add") + "</button></div><p>" + esc(s.desc) + '</p><div class="badges">' + b.join("") + '</div><div class="f"><button class="more" data-detail="' + esc(s.id) + '">details</button><a class="docs" href="' + esc(s.docs) + '" target="_blank" rel="noopener">docs ↗</a><span class="dim small">' + esc((s.tags || []).slice(0, 3).map(function (t) { return "#" + t; }).join(" ")) + "</span></div></article>";
   }
   function renderSectors() {
     var h = '<button class="sec' + (state.sector === "all" ? " active" : "") + '" data-s="all"><span><i>∗</i>All servers</span><span class="n">' + CURATED.length + "</span></button>";
@@ -246,7 +246,7 @@
   function currentList() { return state.stack.map(byId).filter(Boolean); }
   function renderStack() {
     var list = currentList();
-    $("countBadge").textContent = list.length; $("stackCount").textContent = list.length + " server" + (list.length === 1 ? "" : "s");
+    $("countBadge").textContent = list.length; $("fabCount").textContent = list.length; $("fab").classList.toggle("has", list.length > 0); $("stackCount").textContent = list.length + " server" + (list.length === 1 ? "" : "s");
     $("stackList").innerHTML = list.map(function (s) { return '<li><span class="m"><span class="bd ' + (s.remote ? "rem" : "loc") + '">' + (s.remote ? "remote" : s.local.cmd) + "</span><span>" + esc(s.name) + '</span></span><button class="rm" data-id="' + esc(s.id) + '" title="Remove">✕</button></li>'; }).join("");
     $("stackEmpty").classList.toggle("hidden", list.length > 0);
     $("exportBox").classList.toggle("hidden", list.length === 0);
@@ -261,11 +261,30 @@
     if (state.tab === "chatgpt" || state.tab === "grok") { var n = list.filter(function (s) { return !s.remote; }).length; if (n) c += " ⚠ " + n + " server" + (n > 1 ? "s" : "") + " in this stack " + (n > 1 ? "are" : "is") + " local-only."; }
     $("caveat").textContent = c;
   }
-  function renderAll() { renderSectors(); renderGrid(); renderStack(); }
+  var drawerMQ = window.matchMedia("(max-width: 1180px)");
+  function lock() { document.body.classList.toggle("locked", $("stackPanel").classList.contains("open") || !$("detail").hidden); }
+  function openStack() { if (!drawerMQ.matches) { $("stackPanel").scrollIntoView({ behavior: "smooth" }); return; } $("stackPanel").classList.add("open"); $("backdrop").classList.add("show"); $("stackToggle").setAttribute("aria-expanded", "true"); lock(); }
+  function closeStack() { $("stackPanel").classList.remove("open"); $("backdrop").classList.remove("show"); $("stackToggle").setAttribute("aria-expanded", "false"); lock(); }
+  function row(label, val, copyable) { return '<div class="kv"><div class="k">' + label + '</div><div class="v"><code>' + esc(val) + '</code>' + (copyable ? '<button class="btn sm cp" data-copy="' + esc(val) + '">Copy</button>' : "") + "</div></div>"; }
+  function openDetail(id) {
+    var s = byId(id); if (!s) return; state.detail = id;
+    $("dTitle").textContent = s.name; $("dPub").textContent = s.pub + (s.registry ? " · from the MCP registry (unverified)" : s.official ? " · official" : " · community");
+    var h = "<p>" + esc(s.desc) + "</p>";
+    if (s.remote) { h += row("Remote URL · " + (s.remote.transport === "sse" ? "SSE" : "Streamable HTTP") + " · " + ({ oauth: "OAuth", none: "no auth", optional: "no auth (token optional)", urlkey: "key in URL", bearer: "token header" }[s.remote.auth] || s.remote.auth), s.remote.url, true); if (s.remote.note) h += '<p class="dim small">' + esc(s.remote.note) + "</p>"; }
+    if (s.local) h += row("Local command (" + esc(s.local.cmd) + ")", [s.local.cmd].concat(s.local.args).join(" "), true);
+    var env = envOf(s), keys = Object.keys(env);
+    if (keys.length) h += '<div class="kv"><div class="k">Keys / env vars</div><ul class="envl">' + keys.map(function (k) { return "<li><code>" + esc(k) + "</code><span class=\"dim\">" + esc(env[k]) + "</span></li>"; }).join("") + "</ul></div>";
+    h += '<div class="kv"><div class="k">Works with</div><div class="badges">' + ["Claude", "Cursor", "VS Code"].map(function (c) { return '<span class="bd off">' + c + "</span>"; }).join("") + (s.remote ? '<span class="bd off">ChatGPT</span><span class="bd off">Grok</span>' : '<span class="bd key">ChatGPT / Grok: needs hosting or tunnel</span>') + "</div></div>";
+    $("dBody").innerHTML = h; $("dDocs").href = s.docs; renderDetailBtn();
+    $("detail").hidden = false; requestAnimationFrame(function () { $("detail").classList.add("show"); }); $("dBody").scrollTop = 0; lock(); $("dClose").focus({ preventScroll: true });
+  }
+  function renderDetailBtn() { if (state.detail) $("dAdd").textContent = inStack(state.detail) ? "✓ In stack · remove" : "+ Add to stack"; }
+  function closeDetail() { $("detail").classList.remove("show"); $("detail").hidden = true; state.detail = null; lock(); }
+  function renderAll() { renderSectors(); renderGrid(); renderStack(); renderDetailBtn(); }
   function download(name, blob) { var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
   function copy(text) {
-    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).then(function () { toast("Copied to clipboard"); });
-    var t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast("Copied to clipboard");
+    function legacy() { var t = document.createElement("textarea"); t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); toast("Copied to clipboard"); } catch (e) { toast("Copy failed: select the text manually"); } t.remove(); }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { toast("Copied to clipboard"); }, legacy); else legacy();
   }
 
   // registry live scan
@@ -299,24 +318,34 @@
 
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"); if (!t) return;
-    if (t.classList.contains("add") || t.classList.contains("rm")) toggle(t.dataset.id);
+    if (t.dataset.detail) openDetail(t.dataset.detail);
+    else if (t.dataset.copy) copy(t.dataset.copy);
+    else if (t.classList.contains("add") || t.classList.contains("rm")) toggle(t.dataset.id);
     else if (t.dataset.s) { state.sector = t.dataset.s; renderAll(); }
-    else if (t.dataset.stack) { var st = STACKS.find(function (x) { return x.id === t.dataset.stack; }); state.stack = st.ids.slice(); state.stackName = st.name + " stack"; save(); renderAll(); toast("Booted " + st.name + " (" + st.ids.length + ")"); if (innerWidth <= 1180) $("stackPanel").classList.add("open"); }
+    else if (t.dataset.stack) { var st = STACKS.find(function (x) { return x.id === t.dataset.stack; }); state.stack = st.ids.slice(); state.stackName = st.name + " stack"; save(); renderAll(); toast("Booted " + st.name + " (" + st.ids.length + ")"); if (drawerMQ.matches) openStack(); }
     else if (t.dataset.tab) { state.tab = t.dataset.tab; state.file = 0; renderStack(); }
   });
   $("fileSel").addEventListener("change", function () { state.file = +this.value; renderStack(); });
   $("q").addEventListener("input", function () { state.q = this.value; renderGrid(); });
-  $("q").addEventListener("keydown", function (e) { if (e.key === "Enter") liveScan(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); } if (e.key === "Escape") $("stackPanel").classList.remove("open"); });
+  $("q").addEventListener("keydown", function (e) { if (e.key === "Enter") { liveScan(); if (matchMedia("(pointer: coarse)").matches) this.blur(); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "/" && document.activeElement !== $("q")) { e.preventDefault(); $("q").focus(); } if (e.key === "Escape") { if (!$("detail").hidden) closeDetail(); else closeStack(); } });
   $("fRemote").addEventListener("change", renderGrid); $("fOfficial").addEventListener("change", renderGrid);
   $("scanBtn").addEventListener("click", liveScan);
-  $("stackToggle").addEventListener("click", function () { if (innerWidth <= 1180) $("stackPanel").classList.toggle("open"); else $("stackPanel").scrollIntoView({ behavior: "smooth" }); });
-  $("closeStack").addEventListener("click", function () { $("stackPanel").classList.remove("open"); });
+  $("stackToggle").addEventListener("click", function () { $("stackPanel").classList.contains("open") ? closeStack() : openStack(); });
+  $("fab").addEventListener("click", openStack);
+  $("closeStack").addEventListener("click", closeStack);
+  $("backdrop").addEventListener("click", closeStack);
+  $("dClose").addEventListener("click", closeDetail);
+  $("detail").addEventListener("click", function (e) { if (e.target === this) closeDetail(); });
+  $("dAdd").addEventListener("click", function () { if (state.detail) { var added = !inStack(state.detail); toggle(state.detail); toast(added ? "Added to stack" : "Removed from stack"); } });
+  (drawerMQ.addEventListener ? drawerMQ.addEventListener.bind(drawerMQ, "change") : drawerMQ.addListener.bind(drawerMQ))(function () { if (!drawerMQ.matches) closeStack(); });
   $("clearBtn").addEventListener("click", function () { state.stack = []; save(); renderAll(); });
-  $("shareBtn").addEventListener("click", function () { var u = location.origin + location.pathname + "#stack=" + encodeURIComponent(state.stack.filter(function (i) { return i.indexOf("reg:") !== 0; }).join(",")); copy(u); });
+  $("shareBtn").addEventListener("click", function () { var u = location.origin + location.pathname + "#stack=" + encodeURIComponent(state.stack.filter(function (i) { return i.indexOf("reg:") !== 0; }).join(",")); if (navigator.share && matchMedia("(pointer: coarse)").matches) navigator.share({ title: "My StackOS stack", url: u }).catch(function () {}); else copy(u); });
   function cur() { return buildFiles(currentList(), state.stackName)[state.tab][state.file]; }
   $("copyBtn").addEventListener("click", function () { copy(cur().content); });
   $("dlBtn").addEventListener("click", function () { var f = cur(); download(f.dl || f.path.split("/").pop(), new Blob([f.content], { type: /json$/.test(f.path) ? "application/json" : "text/plain" })); });
   $("zipBtn").addEventListener("click", function () { var g = buildFiles(currentList(), state.stackName), files = []; Object.keys(g).forEach(function (k) { files = files.concat(g[k]); }); download("stackos-" + (state.stackName || "stack").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "") + ".zip", zip(files)); toast("Zip downloaded"); });
+  function setHdr() { document.documentElement.style.setProperty("--hdr", document.querySelector(".top").offsetHeight + "px"); }
+  addEventListener("resize", setHdr); setHdr();
   renderStacks(); renderAll();
 })();

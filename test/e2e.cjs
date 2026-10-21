@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core'); const fs = require('fs'); const path = require('path');
+const puppeteer = require(process.env.PUPPETEER || 'puppeteer-core'); const fs = require('fs'); const path = require('path');
 const BASE = process.argv[2] || 'http://127.0.0.1:8787/'; const OUT = process.argv[3] || '/workspace/stackos/screenshots';
 fs.mkdirSync(OUT, { recursive: true }); const DL = '/tmp/ht/dl'; fs.rmSync(DL, { recursive: true, force: true }); fs.mkdirSync(DL, { recursive: true });
 (async () => {
@@ -35,7 +35,7 @@ fs.mkdirSync(OUT, { recursive: true }); const DL = '/tmp/ht/dl'; fs.rmSync(DL, {
   const m = await b.newPage(); await m.setViewport({ width: 390, height: 844, isMobile: true, deviceScaleFactor: 2 }); await m.goto(BASE, { waitUntil: 'networkidle0' });
   r.mobileOverflow = await m.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   await m.screenshot({ path: path.join(OUT, 'stackos-mobile.png') });
-  await m.click('#stackToggle'); await new Promise(s => setTimeout(s, 400)); await m.screenshot({ path: path.join(OUT, 'stackos-mobile-stack.png') });
+  await m.click('#fab'); await new Promise(s => setTimeout(s, 400)); await m.screenshot({ path: path.join(OUT, 'stackos-mobile-stack.png') });
   r.errors = errs; r.downloads = fs.readdirSync(DL);
   console.log(JSON.stringify(r, null, 1)); await b.close();
 })().catch(e => { console.error(e); process.exit(1); });

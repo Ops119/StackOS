@@ -18,10 +18,10 @@
   </div>
   <div class="searchwrap">
     <span class="prompt">~$</span>
-    <input id="q" type="search" placeholder="search servers, tags, publishers…  (press / )" autocomplete="off" spellcheck="false">
-    <button id="scanBtn" class="btn ghost" title="Also search the official MCP Registry live">⟳ Live scan</button>
+    <input id="q" type="search" inputmode="search" enterkeyhint="search" aria-label="Search MCP servers" placeholder="search servers, tags, publishers…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button id="scanBtn" class="btn ghost" title="Also search the official MCP Registry live" aria-label="Live scan the official MCP registry">⟳ <span class="lbl">Live scan</span></button>
   </div>
-  <button id="stackToggle" class="btn primary stack-toggle">Stack <b id="countBadge">0</b></button>
+  <button id="stackToggle" class="btn primary stack-toggle" aria-controls="stackPanel" aria-expanded="false">Stack <b id="countBadge">0</b></button>
 </header>
 
 <main class="layout">
@@ -35,8 +35,8 @@
 
     <div class="boot-head"><h2><span class="dim">02</span> <span id="sectorTitle">All servers</span></h2><span class="dim small" id="resultCount"></span></div>
     <div class="filters">
-      <label><input type="checkbox" id="fRemote"> remote only <span class="dim">(ChatGPT / Grok ready)</span></label>
-      <label><input type="checkbox" id="fOfficial"> official only</label>
+      <label class="chk"><input type="checkbox" id="fRemote"> remote only <span class="dim">(ChatGPT / Grok ready)</span></label>
+      <label class="chk"><input type="checkbox" id="fOfficial"> official only</label>
     </div>
     <div class="grid" id="grid"></div>
 
@@ -48,20 +48,21 @@
     <footer class="foot dim small">StackOS MVP · curated catalogue verified against npm, PyPI and vendor docs (Oct 2026) · <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">modelcontextprotocol.io</a></footer>
   </section>
 
-  <aside class="stack" id="stackPanel" aria-label="Your stack">
+  <aside class="stack" id="stackPanel" aria-label="Your stack" role="dialog">
+    <div class="grab" aria-hidden="true"></div>
     <div class="stack-head">
       <h2>~/my-stack <span class="dim" id="stackCount">0 servers</span></h2>
       <div class="row">
         <button class="btn ghost sm" id="shareBtn" title="Copy a shareable link">Share</button>
         <button class="btn ghost sm" id="clearBtn">Clear</button>
-        <button class="btn ghost sm close" id="closeStack" aria-label="Close">✕</button>
+        <button class="btn ghost sm close" id="closeStack" aria-label="Close stack">✕</button>
       </div>
     </div>
     <ul class="stack-list" id="stackList"></ul>
     <div class="empty dim" id="stackEmpty">Your stack is empty.<br>Click <b>+ Add</b> on any server, or boot a pre-made stack.</div>
     <div class="export" id="exportBox">
       <div class="tabs" id="tabs"></div>
-      <div class="filebar"><select id="fileSel"></select><span class="dim small" id="fileNote"></span></div>
+      <div class="filebar"><select id="fileSel" aria-label="File"></select><span class="dim small" id="fileNote"></span></div>
       <pre id="preview" class="preview"></pre>
       <div class="row wrap">
         <button class="btn" id="copyBtn">Copy</button>
@@ -72,7 +73,17 @@
     </div>
   </aside>
 </main>
-<div id="toast" class="toast"></div>
+<div id="backdrop" class="backdrop"></div>
+<button id="fab" class="fab" aria-controls="stackPanel" aria-label="Open your stack">▤ Stack <b id="fabCount">0</b></button>
+<div id="detail" class="modal" role="dialog" aria-modal="true" aria-labelledby="dTitle" hidden>
+  <div class="sheet">
+    <div class="grab" aria-hidden="true"></div>
+    <div class="sheet-head"><div><h2 id="dTitle"></h2><div class="pub" id="dPub"></div></div><button class="btn ghost sm close-d" id="dClose" aria-label="Close details">✕</button></div>
+    <div class="sheet-body" id="dBody"></div>
+    <div class="sheet-foot"><a class="btn ghost" id="dDocs" target="_blank" rel="noopener">Docs ↗</a><button class="btn primary" id="dAdd"></button></div>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script src="/data.js"></script>
 <script src="/app.js"></script>
 </body>
